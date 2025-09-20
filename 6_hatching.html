@@ -1,0 +1,91 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+    <meta charset="utf-8">
+    <title>GlslCanvas</title>
+    <script type="text/javascript" src="dist/GlslCanvas.js"></script>
+    <style>
+        body {
+            background: #101515;
+        }
+        #glslCanvas {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+        }
+    </style>
+</head>
+<body>
+<canvas id="glslCanvas"
+  data-fragment-url="6_hatching.frag"
+  width="800" height="600"
+  data-textures="data/pina.mp4, data/hatch_0.jpg, data/hatch_1.jpg, data/hatch_2.jpg, data/hatch_3.jpg, data/hatch_4.jpg, data/hatch_5.jpg">
+</canvas></body>
+
+<script>
+  const canvas = document.getElementById("glslCanvas");
+  const sandbox = new GlslCanvas(canvas);
+
+  // 監看 DOM，有 <video> 節點被加進來就處理
+  const fixVideo = (v) => {
+    if (!v) return;
+    // 屬性 + 屬性名（有些瀏覽器要同時存在）
+    v.muted = true;            v.setAttribute("muted", "");
+    v.autoplay = true;         v.setAttribute("autoplay", "");
+    v.playsInline = true;      v.setAttribute("playsinline", "");
+    v.loop = true;             v.setAttribute("loop", "");
+    v.preload = "auto";
+    // 確保開始播放
+    const tryPlay = () => v.play().catch(() => {/* 等使用者互動再播 */});
+    if (v.readyState >= 2) tryPlay();
+    else v.addEventListener("canplay", tryPlay, { once: true });
+  };
+
+  // 先處理已存在的（有些實作會立刻建好）
+  document.querySelectorAll("video").forEach(fixVideo);
+
+  // 再監看後續新增
+  const mo = new MutationObserver((muts) => {
+    for (const m of muts) {
+      m.addedNodes.forEach((n) => {
+        if (n.tagName === "VIDEO") fixVideo(n);
+        // 有時候包在容器裡
+        if (n.querySelector) n.querySelectorAll("video").forEach(fixVideo);
+      });
+    }
+  });
+  mo.observe(document.body, { childList: true, subtree: true });
+
+  // 若仍被瀏覽器策略擋，第一次點擊頁面時強制播放所有影片
+  window.addEventListener("pointerdown", () => {
+    document.querySelectorAll("video").forEach((v) => v.play().catch(()=>{}));
+  }, { once: true });
+
+  // 可選：把 canvas 拉滿
+  canvas.style.width = '100%';
+  canvas.style.height = '100%';
+
+  const armAutoplay = () => {
+    for (const key in sandbox.textures) {
+      const tex = sandbox.textures[key];
+      if (tex && tex.source instanceof HTMLVideoElement) {
+        const v = tex.source;
+        // 同時設 property 與 attribute，最穩
+        v.muted = true;          v.setAttribute('muted','');
+        v.autoplay = true;       v.setAttribute('autoplay','');
+        v.playsInline = true;    v.setAttribute('playsinline','');
+        v.loop = true;           v.setAttribute('loop','');
+        v.preload = 'auto';
+
+        const tryPlay = () => v.play().catch(()=>{});
+        if (v.readyState >= 2) tryPlay();
+        else v.addEventListener('canplay', tryPlay, { once: true });
+      }
+    }
+  };
+</script>
+
+
+</html>
